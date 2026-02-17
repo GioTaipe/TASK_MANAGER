@@ -1,88 +1,48 @@
 <template>
   <v-app>
-    <!-- Pantalla de bienvenida -->
-    <div v-if="showSplashScreen" class="splash-screen">
-      <splash-screen></splash-screen>
-    </div>
-
+    <!-- Spinner de carga -->
+    <v-overlay :model-value="uiStore.isLoading" class="align-center justify-center" persistent>
+      <v-progress-circular color="primary" indeterminate size="64"></v-progress-circular>
+    </v-overlay>
+    <NotificationDialog v-model="uiStore.showNotification" :message="uiStore.message" :type="uiStore.type" />
     <!-- Aplicación principal -->
-    <div v-else transition-style="in:circle:hesitate" class="app-content">
-      <router-view>
-        <v-main>
-          <v-container>
-            <h1>CHRONO TASK</h1>
-
-            <!-- Modal para agregar tarea -->
-            <v-dialog v-model="showTaskForm" max-width="600px">
-              <v-card>
-                <v-card-text>
-                  <task-form @task-saved="handleTaskSaved"></task-form>
-                </v-card-text>
-                <v-card-actions>
-                  <v-spacer></v-spacer>
-                  <v-btn color="blue darken-1" text @click="showTaskForm = false">Close</v-btn>
-                </v-card-actions>
-              </v-card>
-            </v-dialog>
-
-            <task-list ref="taskList" :tasks="tasks" @show-task-form="showTaskForm = true"></task-list>
-          </v-container>
-        </v-main>
-      </router-view>
-    </div>
+    <v-main>
+      <Navbar></Navbar>
+      <v-container>
+        <v-dialog v-model="uiStore.isTaskFormOpen" max-width="600px">
+          <task-form></task-form>
+        </v-dialog>
+        <task-list ref="taskList"></task-list>
+      </v-container>
+    </v-main>
   </v-app>
 </template>
 
 <script>
+import { useUiStore } from '@/stores/uiStore';
+import NotificationDialog from '@/components/NotificationDialog.vue';
 import TaskList from './components/TaskList.vue';
 import TaskForm from './components/TaskForm.vue';
-import SplashScreen from './components/SplashScreen.vue';
+import Navbar from './components/Navbar.vue';
+
 export default {
   components: {
     TaskList,
     TaskForm,
-    SplashScreen,
+    Navbar,
+    NotificationDialog
   },
-  data() {
-    return {
-      showTaskForm: false,
-      taskToEdit: null,
-      showSplashScreen: true,
-    };
-  },
-  mounted() {
-    setTimeout(() => {
-      this.showSplashScreen = false;
-    }, 3000);
-  },
-  methods: {
-    handleTaskSaved() {
-      this.taskToEdit = null;
-      this.showTaskForm = false;
-      this.$refs.taskList.fetchTasks();
-    },
+
+  setup() {
+    const uiStore = useUiStore();
+    return { uiStore }; // Esto hace que uiStore esté disponible en el template y en el resto del componente
   },
 };
 </script>
 <style>
-main {
-  background-color: #e0ebe2;
-}
-
 h1 {
   text-align: center;
   text-transform: uppercase;
   font-size: 50px;
-}
-
-.splash-screen {
-  position: fixed;
-  width: 100%;
-  height: 100vh;
-  background: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
 }
 </style>

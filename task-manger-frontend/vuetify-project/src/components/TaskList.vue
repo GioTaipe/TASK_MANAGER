@@ -1,279 +1,277 @@
 <template>
-  <!-- Confirm Dialog -->
-  <confirm-dialog v-if="showDialog" title="Start a new task?"
-    message="You already have a task running. Do you want to stop it and start a new one?" @confirm="confirmStop"
-    @cancel="cancelDialog" />
+<!-- Sección de tarea activa -->
+  <transition name="fade">
+    <v-row v-if="activeTask" justify="center" class="mt-4 mb-6">
+      <v-col cols="12" md="8" lg="6">
+        <v-card class="timer-active-bg elevation-10 rounded-xl pa-6 text-center">
+          <div class="text-subtitle-1 text-uppercase font-weight-bold mb-2 opacity-80">
+            En progreso
+          </div>
+          <h2 class="text-h4 font-weight-bold mb-4">{{ activeTask.title }}</h2>
 
-  <!-- Pending Tasks -->
+          <div class="d-flex justify-center align-center mb-6">
+            <v-progress-circular :model-value="calculateProgress(activeTask)" :size="220" :width="12" color="white"
+              bg-color="white" bg-opacity="0.2">
+              <span class="text-h3 font-weight-bold">{{ displayTime(activeTask) }}</span>
+            </v-progress-circular>
+          </div>
+          <div class="d-flex justify-center">
+            <v-btn variant="flat" color="white" size="large" class="text-deep-purple font-weight-bold rounded-pill px-8"
+              @click="stopTask(activeTask._id)">
+              <v-icon left class="mr-2">mdi-check-circle</v-icon> Finalizar Tarea
+            </v-btn>
+          </div>
+        </v-card>
+      </v-col>
+    </v-row>
+  </transition>
+<!-- Lista de tareas y historial -->
   <v-container>
     <v-row>
-      <v-col>
-        <v-card class="card">
-          <v-row style="display: flex; align-content: center; justify-content: space-between; margin: 1px;">
-            <v-card-title>PENDING TASK</v-card-title>
-            <v-col cols="auto">
-              <v-btn class="button" @click="checkAndShowTaskForm">Add Task</v-btn>
-            </v-col>
-          </v-row>
-          <v-col v-for="task in pendingTasks" :key="task._id" cols="12">
-            <v-card class="task-card">
-              <v-card-title>{{ task.title }}</v-card-title>
-              <v-card-text>{{ task.description }}</v-card-text>
-              <v-card-actions>
-                <v-btn class="button" v-if="!task.isRunning" @click="startTask(task._id)">Start</v-btn>
-                <v-btn class="button" v-if="task.isRunning" @click="stopTask(task._id)">Stop</v-btn>
-                <v-btn class="button" @click="deleteTask(task._id)">Delete</v-btn>
-              </v-card-actions>
-              <v-col v-if="task.isRunning" cols="12">
-                <v-card class="card">
-                  <h2>{{ formattedTime }}</h2>
-                </v-card>
-              </v-col>
+      <v-col cols="12" md="7">
+        <v-card class="pa-4 rounded-xl shadow-md" color="grey-lighten-4" variant="flat" style="min-height: 400px;">
+          <div class="d-flex align-center justify-space-between mb-4">
+            <h3 class="text-h5 font-weight-bold grey--text text--darken-3">
+              <v-icon left color="deep-purple" class="mr-2">mdi-playlist-play</v-icon> Tareas Pendientes
+            </h3>
+            <div>
+              <v-btn color="deep-purple" class="rounded-lg" @click="checkAndShowTaskForm">
+                <v-icon left class="mr-1">mdi-plus</v-icon> Nueva
+              </v-btn>
+              <v-btn icon variant="text" class="ml-2" @click="showStatsDialog">
+                <v-icon color="deep-purple">mdi-chart-bar</v-icon>
+              </v-btn>
+            </div>
+          </div>
+          <v-fade-transition group>
+            <v-card v-for="task in pendingTasks" :key="task._id" class="mb-4 task-card rounded-lg elevation-2"
+              :class="task.isPomodoro ? 'task-pomodoro' : 'task-stopwatch'">
+              <v-card-item>
+                <template v-slot:prepend>
+                  <v-avatar :color="task.isPomodoro ? 'red-lighten-5' : 'blue-lighten-5'" size="40">
+                    <v-icon :color="task.isPomodoro ? 'red' : 'blue'" size="24">
+                      {{ task.isPomodoro ? 'mdi-timer-sand' : 'mdi-timer-outline' }}
+                    </v-icon>
+                  </v-avatar>
+                </template>
+                <v-card-title class="font-weight-bold">{{ task.title }}</v-card-title>
+                <v-card-subtitle>{{ task.description }}</v-card-subtitle>
+                <template v-slot:append>
+                  <div class="d-flex align-center">
+                    <v-btn v-if="!task.isRunning" icon="mdi-play-circle" color="deep-purple" variant="text"
+                      size="x-large" @click="startTask(task._id)"></v-btn>
+
+                    <v-btn v-else icon="mdi-stop-circle" color="red" variant="text" size="x-large"
+                      @click="stopTask(task._id)"></v-btn>
+
+                    <v-btn icon="mdi-delete-outline" variant="text" color="grey-lighten-1"
+                      @click="deleteTask(task._id)"></v-btn>
+                  </div>
+                </template>
+              </v-card-item>
             </v-card>
-          </v-col>
+          </v-fade-transition>
+        </v-card>
+      </v-col>
+      <v-col cols="12" md="5">
+        <v-card class="pa-4 rounded-xl" variant="outlined" color="grey-lighten-1">
+          <h3 class="text-h6 font-weight-bold mb-4 grey--text text--darken-2">Historial</h3>
+          <v-slide-y-transition group>
+            <v-card v-for="task in completedTasks" :key="task._id" class="mb-2 rounded-lg bg-grey-lighten-5 opacity-70"
+              variant="flat">
+              <v-card-item>
+                <v-card-title class="text-subtitle-1 text-decoration-line-through grey--text">
+                  {{ task.title }}
+                </v-card-title>
+                <v-card-subtitle>
+                  <v-icon size="x-small" class="mr-1">mdi-clock-outline</v-icon>
+                  {{ formatElapsedTime(task.elapsedTime) }}
+                </v-card-subtitle>
+                <template v-slot:append>
+                  <v-btn icon="mdi-information-outline" size="small" variant="text" color="grey"
+                    @click="showDetails(task._id)"></v-btn>
+                </template>
+              </v-card-item>
+              <v-expand-transition>
+                <div v-if="task.showDetails" class="pa-3 text-caption italic grey--text text--darken-1">
+                  {{ task.description }}
+                  <div class="mt-2">
+                    <v-btn size="x-small" color="red-lighten-4" variant="flat" class="text-red-darken-4"
+                      @click="deleteTask(task._id)">Eliminar del historial</v-btn>
+                  </div>
+                </div>
+              </v-expand-transition>
+            </v-card>
+          </v-slide-y-transition>
         </v-card>
       </v-col>
     </v-row>
   </v-container>
+<!-- Diálogo de estadísticas -->
+  <v-dialog v-model="statsDialog" max-width="600px">
+    <v-card class="rounded-xl pa-4 card">
+      <v-card-title class="headline d-flex justify-space-between align-center">
+        Resumen de Productividad
+        <v-icon color="primary">mdi-chart-areaspline</v-icon>
+      </v-card-title>
 
-  <!-- Completed Tasks -->
-  <v-container>
-    <v-row>
-      <v-col>
-        <v-card class="card">
-          <v-card-title>COMPLETED TASK</v-card-title>
-          <v-col v-for="task in completedTasks" :key="task._id" cols="12">
-            <v-card class="task-card">
-              <v-card-title>{{ task.title }}</v-card-title>
-              <v-col>
-                <span>{{ formatElapsedTime(task.elapsedTime) }}</span>
-              </v-col>
-              <v-card-actions>
-                <v-btn class="button" @click="showDetails(task._id)">Details</v-btn>
-                <v-btn class="button" @click="deleteTask(task._id)">Delete</v-btn>
-              </v-card-actions>
-              <v-col v-if="task.showDetails" cols="12">
-                <v-card class="card">
-                  <v-card-text>{{ task.description }}</v-card-text>
-                </v-card>
-              </v-col>
+      <v-divider class="mb-4"></v-divider>
+
+      <v-card-text>
+        <v-row>
+          <v-col cols="12">
+            <v-card flat class="pa-4 text-center rounded-lg" style="background: rgba(255,255,255,0.4)">
+              <div class="text-overline">TIEMPO TOTAL INVERTIDO</div>
+              <div class="text-h3 font-weight-bold">{{ formatElapsedTime(stats.totalTime) }}</div>
             </v-card>
           </v-col>
-        </v-card>
-      </v-col>
-    </v-row>
-  </v-container>
+
+          <v-col cols="6">
+            <v-card flat class="pa-3 rounded-lg" color="orange-lighten-4">
+              <div class="caption grey--text text--darken-2 text-uppercase">Pomodoros</div>
+              <div class="text-h5 font-weight-bold">{{ stats.pomodoroCount }}</div>
+              <div class="caption">{{ formatElapsedTime(stats.pomodoroTime) }}</div>
+            </v-card>
+          </v-col>
+
+          <v-col cols="6">
+            <v-card flat class="pa-3 rounded-lg" color="blue-lighten-4">
+              <div class="caption grey--text text--darken-2 text-uppercase">Cronómetro</div>
+              <div class="text-h5 font-weight-bold">Libre</div>
+              <div class="caption">{{ formatElapsedTime(stats.cronometerTime) }}</div>
+            </v-card>
+          </v-col>
+        </v-row>
+      </v-card-text>
+
+      <v-card-actions>
+        <v-spacer></v-spacer>
+        <v-btn color="grey-darken-2" variant="text" @click="statsDialog = false">Cerrar</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script>
-import ConfirmDialog from './ConfirmDialog.vue';
-import { fetchTasks, deleteTask, startTask, stopTask, updateTask } from '../services/taskService';
+import { useUiStore } from '@/stores/uiStore';
+import { useTaskStore } from '@/stores/taskStore';
 
 export default {
   name: 'TaskList',
-  components: {
-    ConfirmDialog,
+  setup() {
+    const uiStore = useUiStore();
+    const taskStore = useTaskStore();
+    return { uiStore, taskStore };
   },
   data() {
     return {
-      tasks: [],
-      elapsedTime: 0, // Tiempo transcurrido en milisegundos
-      timer: null, // Referencia al intervalo
-      isRunning: false, // Estado del cronómetro
-      showDialog: false, // Mostrar diálogo de confirmación
-      taskToDelete: null, // Tarea a eliminar
+      statsDialog: false,
     };
   },
   computed: {
-    formattedTime() {
-      // Convertir milisegundos a formato hh:mm:ss
-      const hours = String(Math.floor(this.elapsedTime / 3600000)).padStart(2, "0");
-      const minutes = String(Math.floor((this.elapsedTime % 3600000) / 60000)).padStart(2, "0");
-      const seconds = String(Math.floor((this.elapsedTime % 60000) / 1000)).padStart(2, "0");
-      return `${hours}:${minutes}:${seconds}`;
-    },
-    // Filtrar las tareas pendientes
-    pendingTasks() {
-      return this.tasks.filter(task => !task.completed);
-    },
-    // Filtrar las tareas completadas
-    completedTasks() {
-      return this.tasks.filter(task => task.completed);
-    },
+    // Estas propiedades apuntan al Store
+    pendingTasks() { return this.taskStore.pendingTasks; },
+    completedTasks() { return this.taskStore.completedTasks; },
+    activeTask() { return this.taskStore.activeTask; },
+    stats() { return this.taskStore.stats; }
   },
   methods: {
-    // Obtener las tareas desde el servidor
-    async fetchTasks() {
-      const data = await fetchTasks();
-      this.tasks = data.map(task => ({
-        ...task,
-        showDetails: false, // Inicialmente oculto
-        elapsedTime: task.elapsedTime || 0, // Inicializar en 0 si no existe
-        isRunning: false, // Inicialmente detenido
-        timer: null, // Agregar una referencia para el intervalo
-      }));
+    // Lógica visual 
+    calculateProgress(task) {
+      if (!task.isPomodoro) return 100;
+      return Math.min((task.elapsedTime / task.totalPomodoroTime) * 100, 100);
     },
-    // Mostrar el formulario para agregar una tarea
-    checkAndShowTaskForm() {
-      // Verificar si hay una tarea en ejecución
-      const runningTask = this.tasks.find(task => task.isRunning);
-      if (runningTask) {
-        alert("You already have a task running. You must stop it before creating a new one.");
-        return;
-      }
-      this.$emit('show-task-form');
-    },
-    // Formatear el tiempo transcurrido
-    formatElapsedTime(elapsedTime) {
-      // Convertir milisegundos a formato hh:mm:ss
-      const hours = String(Math.floor(elapsedTime / 3600000)).padStart(2, "0");
-      const minutes = String(Math.floor((elapsedTime % 3600000) / 60000)).padStart(2, "0");
-      const seconds = String(Math.floor((elapsedTime % 60000) / 1000)).padStart(2, "0");
+    formatElapsedTime(ms) {
+      const hours = String(Math.floor(ms / 3600000)).padStart(2, "0");
+      const minutes = String(Math.floor((ms % 3600000) / 60000)).padStart(2, "0");
+      const seconds = String(Math.floor((ms % 60000) / 1000)).padStart(2, "0");
       return `${hours}:${minutes}:${seconds}`;
     },
-    // Iniciar una tarea
-    async startTask(id) {
-      const task = this.tasks.find(t => t._id === id);
-      if (!task) return;
-      const runningTask = this.tasks.find(t => t.isRunning);
-      if (runningTask) {
-        this.taskToStart = task;
-        this.showDialog = true;
+    displayTime(task) {
+      if (task.isPomodoro) {
+        const remaining = task.totalPomodoroTime - task.elapsedTime;
+        return this.formatElapsedTime(Math.max(0, remaining));
+      }
+      return this.formatElapsedTime(task.elapsedTime);
+    },
+
+    // Lógica de interacción
+    checkAndShowTaskForm() {
+      if (this.activeTask) {
+        this.uiStore.notify("Debes detener la tarea actual antes de crear una nueva.", "error");
         return;
       }
-      // Detener cualquier intervalo existente
-      if (this.timer) clearInterval(this.timer);
-
-      // Iniciar el cronómetro para esta tarea
-      task.isRunning = true;
-      this.timer = setInterval(() => {
-        this.elapsedTime += 1000; // Incrementar cada segundo
-      }, 1000);
-
-      // Notificar al servidor que la tarea ha comenzado
-      await startTask(id);
+      this.uiStore.toggleTaskForm(true);
     },
-    // Detener una tarea
-    async stopTask(id) {
-      const task = this.tasks.find(t => t._id === id);
-      // Si task no tiene un valor válido, la función se detiene y no ejecuta el resto del código.
-      if (!task) return;
 
-      // Detener el cronómetro
-      if (this.timer) {
-        clearInterval(this.timer);
-        this.timer = null;
-      }
-      task.completed = true;
-      task.isRunning = false; // Notificar al servidor el tiempo transcurrido
-
-      // Normalizar el título (convertir a minúsculas y eliminar espacios extra)
-      const normalizeTitle = (title) => title.toLowerCase().replace(/\s+/g, "");
-
-      const normalizedTitle = normalizeTitle(task.title);
-
-      // Buscar si existe una tarea completada con el mismo título normalizado
-      const completedTask = this.tasks.find(t => t.completed && normalizeTitle(t.title) === normalizedTitle);
-
-      if (completedTask && task._id !== completedTask._id) {
-        // Sumar el tiempo a la tarea existente
-        completedTask.elapsedTime += this.elapsedTime;
-
-        // Enviar la actualización al servidor
-        await updateTask(completedTask._id, { elapsedTime: completedTask.elapsedTime });
-
-        // Eliminar la tarea actual porque ya sumamos su tiempo
-        await deleteTask(id);
-
-      } else {
-        await stopTask(id, this.elapsedTime);
-      }
-      this.elapsedTime = 0; // Reiniciar el tiempo transcurrido
-      this.fetchTasks();
+    async showStatsDialog() {
+      await this.taskStore.fetchStats();
+      this.statsDialog = true;
     },
-    // Eliminar una tarea
-    async deleteTask(id) {
-      const runningTask = this.tasks.find(t => t.isRunning);
 
-      // Verificar si hay una tarea en ejecución
-      if (runningTask) {
-        alert("You already have a task running. You must stop it before taking any further action.");
-        return;
-      } else {
-        await deleteTask(id);
-        this.fetchTasks();
-      }
+    showDetails(id) {
+      const task = this.taskStore.tasks.find(t => t._id === id);
+      if (task) task.showDetails = !task.showDetails;
     },
-    // Confirmar la detención de la tarea en ejecución
-    confirmStop() {
-      if (this.taskToStart) {
-        // Detener la tarea en ejecución
-        const runningTask = this.tasks.find(t => t.isRunning);
-        if (runningTask) {
-          this.stopTask(runningTask._id);
-        }
-      }
-      this.showDialog = false;
-    },
-    // Cancelar el diálogo de confirmación
-    cancelDialog() {
-      this.taskToStart = null;
-      this.showDialog = false;
-    },
-    // Mostrar u ocultar los detalles de una tarea
-    async showDetails(id) {
-      const task = this.tasks.find(t => t._id === id);
-      if (!task) return;
-      task.showDetails = !task.showDetails;
-    },
+
+    // Llamadas directas a las acciones del Store
+    fetchTasks() { this.taskStore.loadTasks(); },
+    startTask(id) { this.taskStore.start(id); },
+    stopTask(id) { this.taskStore.stop(id); },
+    deleteTask(id) { this.taskStore.remove(id); }
   },
   created() {
     this.fetchTasks();
-  },
+  }
 };
 </script>
+
 <style scoped>
-h2 {
-  font-size: 2rem;
-  display: flex;
-  justify-content: center;
+/* Transiciones */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.5s ease;
 }
 
-.card {
-  border-radius: 15px;
-  background: #c3d7c8;
-  border-radius: 8px;
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 
+/* Tarjetas de Tarea */
 .task-card {
-  width: 100%;
-  padding: 10px;
-  outline: none;
-  border: none;
-  color: #000;
-  font-size: 1em;
-  background: transparent;
-  border-left: 2px solid #000;
-  border-bottom: 2px solid #000;
-  transition: 0.1s;
-  border-bottom-left-radius: 8px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  border-left: 6px solid transparent !important;
 }
 
-button {
-  background-color: #f3f7fe;
-  color: #a8c4ad;
-  border: none;
-  cursor: pointer;
-  border-radius: 8px;
-  width: 100px;
-  height: 45px;
-  transition: 0.3s;
+.task-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1) !important;
 }
 
-button:hover {
-  background-color: #a8c4ad;
-  box-shadow: 0 0 0 5px #a8c4ad;
-  color: #fff;
+.task-pomodoro {
+  border-left-color: #FF5252 !important;
 }
 
+.task-stopwatch {
+  border-left-color: #2196F3 !important;
+}
+
+/* Hero Section Active */
+.timer-active-bg {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white !important;
+}
+
+.opacity-70 {
+  opacity: 0.7;
+}
+
+.opacity-80 {
+  opacity: 0.8;
+}
+
+.italic {
+  font-style: italic;
+}
 </style>
