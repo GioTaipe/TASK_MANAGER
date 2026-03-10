@@ -7,7 +7,6 @@ const getAllTasks = async (deviceId) => {
 
 const createTask = async (taskData) => {
     const newTask = new Task(taskData);
-    console.log(newTask);
     
     return await newTask.save();
 };
