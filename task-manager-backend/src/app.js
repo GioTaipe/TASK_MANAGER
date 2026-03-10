@@ -7,7 +7,7 @@ const taskRoutes = require('./routes/taskRoutes');
 
 app.use(express.json());
 app.use(cors({
-  origin: 'http://localhost:3001',
+  origin:'https://task-manager-2-wvfr.onrender.com',
   allowedHeaders: ['Content-Type', 'x-device-id'], // Header personalizado para el deviceId
   methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS']
 }));
