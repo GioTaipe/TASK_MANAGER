@@ -12,7 +12,7 @@ const getDeviceId = () => {
 };
 
 const api = axios.create({
-  baseURL: "https://task-manager-1-ckvi.onrender.com",
+  baseURL: "https://task-manager-1-ckvi.onrender.com/api",
 });
 
 // 2. Interceptor de Petición
@@ -35,16 +35,15 @@ api.interceptors.response.use(
   (error) => {
     const uiStore = useUiStore();
     uiStore.setLoading(false);
-
+    
     let mensajeParaMostrar = "";
 
     if (error.code === "ERR_NETWORK") {
-      // Axios nos da este código cuando el servidor está apagado
-      mensajeParaMostrar = "No se pudo conectar con el servidor.";
+        // Axios nos da este código cuando el servidor está apagado
+        mensajeParaMostrar = "No se pudo conectar con el servidor.";
     } else {
-      // Si hay respuesta del server pero con error (400, 500, etc)
-      mensajeParaMostrar =
-        error.response?.data?.message || "Error inesperado en el servidor";
+        // Si hay respuesta del server pero con error (400, 500, etc)
+        mensajeParaMostrar = error.response?.data?.message || "Error inesperado en el servidor";
     }
 
     console.log("Enviando a notificación:", mensajeParaMostrar);
