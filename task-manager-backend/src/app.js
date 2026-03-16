@@ -9,7 +9,7 @@ app.use(express.json());
 app.use(cors({
   origin: [
     'http://localhost:3000',
-    'https://task-manager-2-wvfr.onrender.com'
+    'https://task-manager.up.railway.app'
   ],
   allowedHeaders: ['Content-Type', 'x-device-id'],
   methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS']
