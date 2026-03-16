@@ -12,7 +12,7 @@ const getDeviceId = () => {
 };
 
 const api = axios.create({
-  baseURL: "https://task-manager.up.railway.app",
+  baseURL: "https://task-manager.up.railway.app/api",
 });
 
 // 2. Interceptor de Petición
