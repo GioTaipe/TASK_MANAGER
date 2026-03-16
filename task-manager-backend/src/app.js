@@ -4,6 +4,7 @@ const app = express();
 const cors = require('cors');
 const taskRoutes = require('./routes/taskRoutes'); 
 
+app.use(express.json());
 app.use(cors({
   origin: [
     'https://task-manager.up.railway.app',
@@ -14,7 +15,8 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'x-device-id'],
   methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS']
 }));
-app.use(express.json());
+
+app.options('*', cors());
 app.use('/api', taskRoutes);
 
 module.exports = app;
