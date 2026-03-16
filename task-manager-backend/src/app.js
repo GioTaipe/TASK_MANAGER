@@ -8,7 +8,7 @@ const taskRoutes = require('./routes/taskRoutes');
 app.use(express.json());
 app.use(cors({
   origin: [
-    'http://localhost:3000',
+    'https://task-manager.up.railway.app',
     'https://task-manager.up.railway.app/api',
     'https://task-manager-2-wvfr.onrender.com'
   ],
